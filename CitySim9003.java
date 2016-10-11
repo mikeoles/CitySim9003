@@ -2,15 +2,23 @@ import java.util.*;
 
 public class CitySim9003{
   public static ArrayList<Location> mapLocations;
+  public static ArrayList<Location> outsideCities;
 
   public static void main(String[] args) {
 
     //number of drivers to simulate
     final int numDrivers = 5;
 
-    int seed = checkArgs(args);
+    int seed = 0;
+    try{
+      seed = checkArgs(args);
+    }catch(IllegalArgumentException iae){
+      System.out.println("Please enter a single integer arguement");
+      System.exit(0);
+    }
 
     //list of all locations on the map
+    outsideCities = new ArrayList<Location>();
     mapLocations = new ArrayList<Location>();
     mapLocations = setupMap();
 
@@ -25,12 +33,18 @@ public class CitySim9003{
       System.out.println("Driver starts the simulation at the " + start.getName());
 
       //Simulate driver's path through the city
-      while(!currentDriver.getLocation().isOutsideCity()){
+      while(!currentDriver.getLocation().isOutsideCity(outsideCities)){
         Location currentLocation = currentDriver.getLocation();
 
         //Find where the driver will go next
         nextSeed = rand.nextInt();
-        Path nextPath = currentLocation.getRandomPath(nextSeed);
+        Path nextPath = new Path();
+        try{
+          nextPath = currentLocation.getRandomPath(nextSeed);
+        }catch(IllegalStateException ise){
+          System.out.println("Driver is stuck at: " + currentLocation);
+          System.exit(0);
+        }
         String nextLocationName = nextPath.getLocation();
         Location nextLocation = getLocationByName(nextLocationName);
 
@@ -42,10 +56,9 @@ public class CitySim9003{
       System.out.println("Driver has " + currentDriver.getCupsOfCoffee() + " cups of coffee");
       System.out.println();
     }
-
-
   }
 
+  //returns a location based a the name of that location
   private static Location getLocationByName(String name){
     for(int i=0;i<mapLocations.size(); i++){
       Location loc = mapLocations.get(i);
@@ -58,32 +71,31 @@ public class CitySim9003{
     return null;
   }
 
+  //returns a random location from the map that is inside the city
   private static Location getRandomCityLocation(int seed){
     Random rand = new Random(seed);
     int listSize = mapLocations.size();
     while(true){
       Location loc = mapLocations.get(rand.nextInt(listSize));
-      if(!loc.isOutsideCity()){
+      if(!loc.isOutsideCity(outsideCities)){
         return loc;
       }
     }
   }
 
   //return users chosen seed from arguement
-  private static int checkArgs(String[] args){
+  public static int checkArgs(String[] args){
     int seed = 0;
 
     if(args.length!=1){
-      System.out.println("Please enter a single integer arguement");
-      System.exit(0);
+      throw new IllegalArgumentException("Multiple Arguements Entered");
     }
 
     try{
       seed = Integer.parseInt(args[0]);
     }
     catch(NumberFormatException e){
-      System.out.println("Please enter a integer arguement");
-      System.exit(0);
+      throw new IllegalArgumentException("No Integer Entered");
     }
 
     return seed;
@@ -113,9 +125,11 @@ public class CitySim9003{
 
     Location cleveland = new Location("Cleveland");
     mapLocations.add(cleveland);
+    outsideCities.add(cleveland);
 
     Location philadelphia = new Location("Philadelphia");
     mapLocations.add(philadelphia);
+    outsideCities.add(philadelphia);
 
     return mapLocations;
   }
@@ -123,7 +137,7 @@ public class CitySim9003{
   private static void printDriverStatus(Driver currentDriver, Path nextPath, Location nextLocation){
     System.out.print("Driver " + currentDriver.getId());
     System.out.print(" heading from " + currentDriver.getLocation().getName());
-    if(nextLocation.isOutsideCity()){
+    if(nextLocation.isOutsideCity(outsideCities)){
       System.out.print(" to Outside City ");
       System.out.println(" via " + nextPath.getStreet());
       System.out.println("Driver had gone to " + nextPath.getLocation() + " !");
